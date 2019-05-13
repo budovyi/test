@@ -1,0 +1,42 @@
+package co.lmst.shippedlist.courier.service.trackinginfoanalytics;
+
+import co.lmst.shippedlist.courier.service.enums.TrackingStatus;
+import co.lmst.shippedlist.courier.service.tracking.model.TrackingInfo;
+import org.bson.types.ObjectId;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+
+@Component
+public class TrackingInfoAnalyticsReceiver {
+
+    @Autowired
+    private TrackingInfoAnalyticsDao trackingInfoAnalyticsDao;
+
+    public void receiveMessage(String message) throws InterruptedException, ParseException {
+        JSONObject jsonObject = new JSONObject(message);
+
+        JSONArray events = jsonObject.getJSONArray("events");
+        for (int i = 0; i < events.length(); i++){
+            JSONObject event = events.getJSONObject(i);
+
+            SimpleDateFormat date = new SimpleDateFormat("dd/MM/yyyy");
+            trackingInfoAnalyticsDao.save(
+                    new TrackingInfoAnalyticsModel().builder()
+                            .courier(jsonObject.has("courier") ? jsonObject.getString("courier") : null)
+                            .trackingNumber(jsonObject.has("trackingNumber") ? jsonObject.getString("trackingNumber") : null)
+                            .dayMonthYear(event.has("dayMonthYear") ? date.parse(event.getString("dayMonthYear")) : null)
+                            .trackingStatus(event.has("trackingStatus") ? TrackingStatus.valueOf(event.getString("trackingStatus")) : null)
+                            .serviceDescription(jsonObject.has("serviceDescription") ? jsonObject.getString("serviceDescription") : null)
+                            .userId(new ObjectId(jsonObject.has("userId") ? jsonObject.getString("userId") : null))
+                            .build()
+            );
+        }
+
+    }
+
+}
